@@ -2,35 +2,27 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
+use App\Repositories\UserRepository;
+use App\Http\Requests\RegisterRequest;
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\UpdateProfileRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    // F1.1 : Inscription d'un nouveau chef de projet ou superadmin
-    public function register(Request $request)
+    protected UserRepository $userRepository;
+
+    public function __construct(UserRepository $userRepository)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-            'type' => 'required|in:chef_de_projet,superadmin',
-        ]);
+        $this->userRepository = $userRepository;
+    }
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'type' => $request->type,
-        ]);
-
+    // F1.1 : Inscription
+    public function register(RegisterRequest $request)
+    {
+        $user = $this->userRepository->create($request->validated());
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -41,14 +33,9 @@ class AuthController extends Controller
     }
 
     // F1.1 : Connexion
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
-
-        $user = User::where('email', $request->email)->first();
+        $user = $this->userRepository->findByEmail($request->email);
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
@@ -68,38 +55,21 @@ class AuthController extends Controller
     // F1.2 : Déconnexion
     public function logout(Request $request)
     {
-        // Supprime le token actuel de l'utilisateur (celui utilisé pour cette requête)
         $request->user()->currentAccessToken()->delete();
-
-        return response()->json([
-            'message' => 'Déconnexion réussie.',
-        ]);
+        return response()->json(['message' => 'Déconnexion réussie.']);
     }
 
-    // F1.3 : Consulter le profil
+    // F1.3 : Profil
     public function profile(Request $request)
     {
-        return response()->json([
-            'user' => $request->user(),
-        ]);
+        return response()->json(['user' => $request->user()]);
     }
 
     // F1.3 : Modifier le profil
-    public function updateProfile(Request $request)
+    public function updateProfile(UpdateProfileRequest $request)
     {
-        $user = $request->user();
-
-        $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $user->id,
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $user->update($request->only(['name', 'email']));
-
+        $user = $this->userRepository->updateProfile($request->user(), $request->validated());
+        
         return response()->json([
             'message' => 'Profil mis à jour avec succès.',
             'user' => $user,
