@@ -9,14 +9,25 @@ class Task extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'description', 'type', 'complexity', 'size', 'status', 'project_id'];
+    // Les champs autorisés à être modifiés en masse
+    protected $fillable = [
+        'name',
+        'description',
+        'type',
+        'complexity',
+        'size',
+        'status',
+        'project_id',
+        'transactions',    // <-- AJOUTÉ pour l'IA
+        'entities',        // <-- AJOUTÉ pour l'IA
+        'team_exp',        // <-- AJOUTÉ pour l'IA
+        'manager_exp',     // <-- AJOUTÉ pour l'IA
+    ];
 
-    // Une tâche appartient à un projet
     public function project() {
         return $this->belongsTo(Project::class);
     }
     
-    // Préparation pour le Module 4 (Estimations IA)
     public function estimations() {
         return $this->hasMany(Estimation::class);
     }
