@@ -2,25 +2,35 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password'])]
-#[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * Les attributs qui sont assignables en masse.
+     */
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'type', // <-- Ajouté pour le cahier des charges
+    ];
+
+    /**
+     * Les attributs qui doivent être cachés pour la sérialisation.
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
+    /**
+     * Les attributs qui doivent être convertis (cast).
      */
     protected function casts(): array
     {
@@ -28,5 +38,13 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Relation : Un chef de projet gère plusieurs projets (Module 2).
+     */
+    public function projects()
+    {
+        return $this->hasMany(Project::class);
     }
 }
