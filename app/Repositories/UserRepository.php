@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str; // <-- AJOUTÉ ICI
 
 class UserRepository
 {
@@ -14,6 +15,7 @@ class UserRepository
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'type' => $data['type'] ?? 'chef_de_projet',
+            'email_verification_token' => Str::random(40), // <-- AJOUTÉ ICI
         ]);
     }
 
