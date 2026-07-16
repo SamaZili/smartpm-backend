@@ -5,12 +5,19 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
-use App\Http\Controllers\EstimationController; // <-- AJOUTER
-use App\Http\Controllers\DashboardController;  // <-- AJOUTER
+use App\Http\Controllers\EstimationController;
+use App\Http\Controllers\DashboardController;
 
+// ==========================================
+// Routes Publiques (Authentification)
+// ==========================================
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::get('/email/verify', [AuthController::class, 'verifyEmail']); // <-- NOUVELLE ROUTE AJOUTÉE
 
+// ==========================================
+// Routes Protégées (Nécessite un Token Sanctum)
+// ==========================================
 Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('/logout', [AuthController::class, 'logout']);

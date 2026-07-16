@@ -9,6 +9,8 @@ use App\Http\Requests\UpdateProfileRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\VerifyEmailMail;
 
 class AuthController extends Controller
 {
@@ -21,11 +23,17 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request)
     {
+        // 1. Créer l'utilisateur (le token de vérification est généré dans le UserRepository)
         $user = $this->userRepository->create($request->validated());
+
+        // 2. Envoyer l'email de vérification via Mailtrap
+        Mail::to($user->email)->send(new VerifyEmailMail($user));
+
+        // 3. Générer le token d'authentification API (Sanctum)
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Utilisateur enregistré avec succès.',
+            'message_code' => 'REGISTRATION_SUCCESS',
             'user' => $user,
             'token' => $token,
         ], 201);
@@ -36,15 +44,16 @@ class AuthController extends Controller
         $user = $this->userRepository->findByEmail($request->email);
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['Les identifiants fournis sont incorrects.'],
-            ]);
+            return response()->json([
+                'error_code' => 'INVALID_CREDENTIALS',
+                'message' => 'Les identifiants fournis sont incorrects.'
+            ], 401);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Connexion réussie.',
+            'message_code' => 'LOGIN_SUCCESS',
             'user' => $user,
             'token' => $token,
         ]);
@@ -53,12 +62,15 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-        return response()->json(['message' => 'Déconnexion réussie.']);
+        return response()->json(['message_code' => 'LOGOUT_SUCCESS']);
     }
 
     public function profile(Request $request)
     {
-        return response()->json(['user' => $request->user()]);
+        return response()->json([
+            'message_code' => 'PROFILE_FETCHED',
+            'user' => $request->user()
+        ]);
     }
 
     public function updateProfile(UpdateProfileRequest $request)
@@ -66,8 +78,36 @@ class AuthController extends Controller
         $user = $this->userRepository->updateProfile($request->user(), $request->validated());
 
         return response()->json([
-            'message' => 'Profil mis à jour avec succès.',
+            'message_code' => 'PROFILE_UPDATED',
             'user' => $user,
         ]);
+    }
+
+    /**
+     * Vérifier l'email de l'utilisateur via le token
+     */
+    public function verifyEmail(Request $request)
+    {
+        $token = $request->query('token');
+
+        // Chercher l'utilisateur avec ce token
+        $user = \App\Models\User::where('email_verification_token', $token)->first();
+
+        if (! $user) {
+            return response()->json([
+                'error_code' => 'INVALID_VERIFICATION_TOKEN',
+                'message' => 'Lien de vérification invalide ou expiré.'
+            ], 404);
+        }
+
+        // Marquer l'email comme vérifié et supprimer le token
+        $user->email_verified_at = now();
+        $user->email_verification_token = null;
+        $user->save();
+
+        return response()->json([
+            'message_code' => 'EMAIL_VERIFIED_SUCCESS',
+            'message' => 'Email vérifié avec succès ✅'
+        ], 200);
     }
 }
