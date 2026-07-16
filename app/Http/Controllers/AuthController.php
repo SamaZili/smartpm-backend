@@ -19,7 +19,6 @@ class AuthController extends Controller
         $this->userRepository = $userRepository;
     }
 
-    // F1.1 : Inscription
     public function register(RegisterRequest $request)
     {
         $user = $this->userRepository->create($request->validated());
@@ -32,7 +31,6 @@ class AuthController extends Controller
         ], 201);
     }
 
-    // F1.1 : Connexion
     public function login(LoginRequest $request)
     {
         $user = $this->userRepository->findByEmail($request->email);
@@ -52,24 +50,21 @@ class AuthController extends Controller
         ]);
     }
 
-    // F1.2 : Déconnexion
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
         return response()->json(['message' => 'Déconnexion réussie.']);
     }
 
-    // F1.3 : Profil
     public function profile(Request $request)
     {
         return response()->json(['user' => $request->user()]);
     }
 
-    // F1.3 : Modifier le profil
     public function updateProfile(UpdateProfileRequest $request)
     {
         $user = $this->userRepository->updateProfile($request->user(), $request->validated());
-        
+
         return response()->json([
             'message' => 'Profil mis à jour avec succès.',
             'user' => $user,
