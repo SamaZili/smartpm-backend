@@ -18,7 +18,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'type', // <-- Ajouté pour le cahier des charges
+        'type',
+        'email_verified_at',
+        'email_verification_token', // <-- CETTE LIGNE DOIT ÊTRE PRÉSENTE
+ // <-- Ajouté pour le cahier des charges
     ];
 
     /**
