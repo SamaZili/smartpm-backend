@@ -46,7 +46,7 @@ class EstimationController extends Controller
             ], Response::HTTP_NOT_FOUND);
         }
 
-        // Vérification des champs (REMARQUE 1 & 2 : error_code au lieu de string en dur)
+        // Vérification des champs
         if (empty($task->name) && empty($task->description)) {
             return response()->json([
                 'error_code' => 'TASK_FIELDS_REQUIRED',
@@ -57,7 +57,7 @@ class EstimationController extends Controller
         // 2. Appel FastAPI
         try {
             $response = Http::timeout(5)->post('http://127.0.0.1:8001/predict', [
-                'title'       => $task->name, // ou $task->title selon le nom de ta colonne en BDD
+                'title'       => $task->name, 
                 'description' => $task->description,
             ]);
         } catch (\Exception $e) {
@@ -65,7 +65,7 @@ class EstimationController extends Controller
             return response()->json([
                 'error_code' => 'IA_SERVICE_UNAVAILABLE',
                 'message' => "Impossible de contacter le service IA. Vérifiez qu'il tourne bien sur le port 8001."
-            ], Response::HTTP_SERVICE_UNAVAILABLE); // REMARQUE 3 : Constante au lieu de 503
+            ], Response::HTTP_SERVICE_UNAVAILABLE);
         }
 
         if (!$response->successful()) {
@@ -73,7 +73,7 @@ class EstimationController extends Controller
             return response()->json([
                 'error_code' => 'IA_SERVICE_ERROR',
                 'message' => "Erreur du service d'estimation IA"
-            ], Response::HTTP_INTERNAL_SERVER_ERROR); // REMARQUE 3 : Constante au lieu de 500
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         $data = $response->json();
@@ -84,7 +84,7 @@ class EstimationController extends Controller
             return response()->json([
                 'error_code' => 'INVALID_IA_RESPONSE',
                 'message' => "Réponse invalide du service IA."
-            ], Response::HTTP_INTERNAL_SERVER_ERROR); // REMARQUE 3 : Constante au lieu de 500
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         // 4. Sauvegarde en base
@@ -107,7 +107,7 @@ class EstimationController extends Controller
         return response()->json([
             'message' => 'Estimation réalisée avec succès via IA.',
             'estimation' => $estimation,
-        ], Response::HTTP_CREATED); // REMARQUE 3 : Constante au lieu de 201
+        ], Response::HTTP_CREATED);
     }
 
     /**
@@ -123,7 +123,7 @@ class EstimationController extends Controller
             ], Response::HTTP_OK);
         } catch (\Exception $e) {
             return response()->json([
-                'success' => false,
+                'error_code' => 'ESTIMATION_NOT_FOUND',
                 'message' => 'Estimation non trouvée'
             ], Response::HTTP_NOT_FOUND);
         }
@@ -145,8 +145,9 @@ class EstimationController extends Controller
                 'data' => $estimations
             ], Response::HTTP_OK);
         } catch (\Exception $e) {
+            Log::error('Erreur lors de la récupération des estimations : ' . $e->getMessage());
             return response()->json([
-                'success' => false,
+                'error_code' => 'ESTIMATIONS_FETCH_FAILED',
                 'message' => 'Erreur lors de la récupération des estimations'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -176,8 +177,9 @@ class EstimationController extends Controller
                 'data' => $estimation
             ], Response::HTTP_OK);
         } catch (\Exception $e) {
+            Log::error('Erreur lors de la mise à jour de l\'estimation : ' . $e->getMessage());
             return response()->json([
-                'success' => false,
+                'error_code' => 'ESTIMATION_UPDATE_FAILED',
                 'message' => 'Erreur lors de la mise à jour'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -197,8 +199,9 @@ class EstimationController extends Controller
                 'message' => 'Estimation supprimée avec succès'
             ], Response::HTTP_OK);
         } catch (\Exception $e) {
+            Log::error('Erreur lors de la suppression de l\'estimation : ' . $e->getMessage());
             return response()->json([
-                'success' => false,
+                'error_code' => 'ESTIMATION_DELETE_FAILED',
                 'message' => 'Erreur lors de la suppression'
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
