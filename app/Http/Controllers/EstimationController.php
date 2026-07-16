@@ -148,6 +148,9 @@ class EstimationController extends Controller
             $data = $request->validate([
                 'predicted_effort' => 'nullable|numeric|min:0',
                 'confidence_score' => 'nullable|numeric|between:0,1',
+                'complexity' => 'nullable|numeric|min:1|max:10',
+                'priority' => 'nullable|string|in:low,medium,high',
+                'team_size' => 'nullable|integer|min:1',
             ]);
 
             $estimation->update($data);
