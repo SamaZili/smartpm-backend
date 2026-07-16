@@ -46,7 +46,7 @@ class EstimationController extends Controller
             ], Response::HTTP_NOT_FOUND);
         }
 
-        // Vérification des champs (⚠️ Si ta colonne s'appelle 'title' et non 'name', remplace $task->name par $task->title ici et dans le payload ci-dessous)
+        // Vérification des champs (REMARQUE 1 & 2 : error_code au lieu de string en dur)
         if (empty($task->name) && empty($task->description)) {
             return response()->json([
                 'error_code' => 'TASK_FIELDS_REQUIRED',
@@ -57,7 +57,7 @@ class EstimationController extends Controller
         // 2. Appel FastAPI
         try {
             $response = Http::timeout(5)->post('http://127.0.0.1:8001/predict', [
-                'title'       => $task->name, // ou $task->title selon ta BDD
+                'title'       => $task->name, // ou $task->title selon le nom de ta colonne en BDD
                 'description' => $task->description,
             ]);
         } catch (\Exception $e) {
@@ -65,7 +65,7 @@ class EstimationController extends Controller
             return response()->json([
                 'error_code' => 'IA_SERVICE_UNAVAILABLE',
                 'message' => "Impossible de contacter le service IA. Vérifiez qu'il tourne bien sur le port 8001."
-            ], Response::HTTP_SERVICE_UNAVAILABLE);
+            ], Response::HTTP_SERVICE_UNAVAILABLE); // REMARQUE 3 : Constante au lieu de 503
         }
 
         if (!$response->successful()) {
@@ -73,7 +73,7 @@ class EstimationController extends Controller
             return response()->json([
                 'error_code' => 'IA_SERVICE_ERROR',
                 'message' => "Erreur du service d'estimation IA"
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            ], Response::HTTP_INTERNAL_SERVER_ERROR); // REMARQUE 3 : Constante au lieu de 500
         }
 
         $data = $response->json();
@@ -84,7 +84,7 @@ class EstimationController extends Controller
             return response()->json([
                 'error_code' => 'INVALID_IA_RESPONSE',
                 'message' => "Réponse invalide du service IA."
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+            ], Response::HTTP_INTERNAL_SERVER_ERROR); // REMARQUE 3 : Constante au lieu de 500
         }
 
         // 4. Sauvegarde en base
@@ -107,9 +107,9 @@ class EstimationController extends Controller
         return response()->json([
             'message' => 'Estimation réalisée avec succès via IA.',
             'estimation' => $estimation,
-        ], Response::HTTP_CREATED);
+        ], Response::HTTP_CREATED); // REMARQUE 3 : Constante au lieu de 201
     }
-    
+
     /**
      * Afficher une estimation spécifique
      */
@@ -128,7 +128,7 @@ class EstimationController extends Controller
             ], Response::HTTP_NOT_FOUND);
         }
     }
-    
+
     /**
      * Lister toutes les estimations d'un projet
      */
@@ -151,7 +151,7 @@ class EstimationController extends Controller
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
-    
+
     /**
      * Mettre à jour une estimation
      */
@@ -182,7 +182,7 @@ class EstimationController extends Controller
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
-    
+
     /**
      * Supprimer une estimation
      */
