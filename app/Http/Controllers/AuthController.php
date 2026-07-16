@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use App\Mail\VerifyEmailMail;
 
 class AuthController extends Controller
@@ -27,7 +28,12 @@ class AuthController extends Controller
         $user = $this->userRepository->create($request->validated());
 
         // 2. Envoyer l'email de vérification via Mailtrap
-        Mail::to($user->email)->send(new VerifyEmailMail($user));
+        // On protège cet envoi : si Mailtrap plante, l'inscription doit quand même réussir
+        try {
+            Mail::to($user->email)->send(new VerifyEmailMail($user));
+        } catch (\Throwable $e) {
+            Log::error('Échec envoi email de vérification pour ' . $user->email . ' : ' . $e->getMessage());
+        }
 
         // 3. Générer le token d'authentification API (Sanctum)
         $token = $user->createToken('auth_token')->plainTextToken;
