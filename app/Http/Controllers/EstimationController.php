@@ -29,26 +29,36 @@ class EstimationController extends Controller
      */
     public function predict(Request $request, $project_id, $task_id): JsonResponse
     {
+        // 1. Vérifier le projet
         $project = $request->user()->projects()->find($project_id);
         if (!$project) {
             return response()->json([
+                'success' => false,
                 'error_code' => 'PROJECT_NOT_FOUND',
+                'message' => 'Le projet spécifié est introuvable.',
             ], Response::HTTP_NOT_FOUND);
         }
 
+        // 2. Vérifier la tâche
         $task = $this->taskRepository->findByIdAndProject($task_id, $project);
         if (!$task) {
             return response()->json([
+                'success' => false,
                 'error_code' => 'TASK_NOT_FOUND',
+                'message' => 'La tâche spécifiée est introuvable.',
             ], Response::HTTP_NOT_FOUND);
         }
 
+        // 3. Vérifier les champs requis
         if (empty($task->name) && empty($task->description)) {
             return response()->json([
+                'success' => false,
                 'error_code' => 'TASK_FIELDS_REQUIRED',
+                'message' => 'La tâche doit avoir un nom ou une description.',
             ], Response::HTTP_BAD_REQUEST);
         }
 
+        // 4. Appel au service FastAPI
         try {
             $response = Http::timeout(5)->post('http://127.0.0.1:8001/predict', [
                 'title'       => $task->name,
@@ -57,14 +67,18 @@ class EstimationController extends Controller
         } catch (\Exception $e) {
             Log::error('FastAPI connexion échouée : ' . $e->getMessage());
             return response()->json([
+                'success' => false,
                 'error_code' => 'IA_SERVICE_UNAVAILABLE',
+                'message' => 'Le service d\'IA est indisponible.',
             ], Response::HTTP_SERVICE_UNAVAILABLE);
         }
 
         if (!$response->successful()) {
             Log::error('FastAPI a répondu une erreur : ' . $response->status() . ' - ' . $response->body());
             return response()->json([
+                'success' => false,
                 'error_code' => 'IA_SERVICE_ERROR',
+                'message' => 'Erreur interne du service d\'IA.',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
@@ -73,26 +87,33 @@ class EstimationController extends Controller
         if (!isset($data['predicted_effort_hours'])) {
             Log::error('Réponse FastAPI inattendue : ' . json_encode($data));
             return response()->json([
+                'success' => false,
                 'error_code' => 'INVALID_IA_RESPONSE',
+                'message' => 'La réponse de l\'IA est invalide.',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
+        // 5. Sauvegarde en base de données
         try {
             $estimation = $this->estimationRepository->createEstimation(
                 $task,
                 (float) $data['predicted_effort_hours'],
-                0.85
+                0.85 // Score de confiance par défaut (ou à récupérer de l'IA si disponible)
             );
         } catch (\Exception $e) {
             Log::error('Erreur sauvegarde estimation : ' . $e->getMessage());
             return response()->json([
+                'success' => false,
                 'error_code' => 'DATABASE_SAVE_ERROR',
+                'message' => 'Échec de la sauvegarde de l\'estimation.',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
+        // 6. Succès : Retour au format attendu par le frontend (ApiResponse)
         return response()->json([
+            'success' => true,
             'message_code' => 'ESTIMATION_SUCCESS',
-            'estimation' => $estimation,
+            'data' => $estimation,
         ], Response::HTTP_CREATED);
     }
 
@@ -104,11 +125,12 @@ class EstimationController extends Controller
         try {
             $estimation = Estimation::with(['task', 'project'])->findOrFail($id);
             return response()->json([
-                'message_code' => 'ESTIMATION_FOUND',
+                'success' => true,
                 'data' => $estimation
             ], Response::HTTP_OK);
         } catch (\Exception $e) {
             return response()->json([
+                'success' => false,
                 'error_code' => 'ESTIMATION_NOT_FOUND',
             ], Response::HTTP_NOT_FOUND);
         }
@@ -126,12 +148,13 @@ class EstimationController extends Controller
                 ->get();
 
             return response()->json([
-                'message_code' => 'ESTIMATIONS_FETCHED',
+                'success' => true,
                 'data' => $estimations
             ], Response::HTTP_OK);
         } catch (\Exception $e) {
             Log::error('Erreur récupération estimations : ' . $e->getMessage());
             return response()->json([
+                'success' => false,
                 'error_code' => 'ESTIMATIONS_FETCH_FAILED',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -156,16 +179,18 @@ class EstimationController extends Controller
             $estimation->update($data);
 
             return response()->json([
-                'message_code' => 'ESTIMATION_UPDATED',
+                'success' => true,
                 'data' => $estimation
             ], Response::HTTP_OK);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
+                'success' => false,
                 'error_code' => 'ESTIMATION_NOT_FOUND',
             ], Response::HTTP_NOT_FOUND);
         } catch (\Exception $e) {
             Log::error('Erreur mise à jour estimation : ' . $e->getMessage());
             return response()->json([
+                'success' => false,
                 'error_code' => 'ESTIMATION_UPDATE_FAILED',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
@@ -181,17 +206,23 @@ class EstimationController extends Controller
             $estimation->delete();
 
             return response()->json([
+                'success' => true,
                 'message_code' => 'ESTIMATION_DELETED',
             ], Response::HTTP_OK);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
+                'success' => false,
                 'error_code' => 'ESTIMATION_NOT_FOUND',
             ], Response::HTTP_NOT_FOUND);
         } catch (\Exception $e) {
             Log::error('Erreur suppression estimation : ' . $e->getMessage());
             return response()->json([
+                'success' => false,
                 'error_code' => 'ESTIMATION_DELETE_FAILED',
             ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
     }
-}
+}cd C:\Users\DELL\smartpm-backend
+git add app/Http/Controllers/EstimationController.php
+git commit -m "fix: standardize EstimationController responses to match frontend ApiResponse contract (success/data wrapper)"
+git push origin feature/nlp-laravel-integration
