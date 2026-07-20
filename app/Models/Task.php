@@ -14,23 +14,26 @@ class Task extends Model
         'description',
         'status',
         'complexity',
-        'project_id',   // <-- DOIT ÊTRE ICI
-        'user_id',      // <-- DOIT ÊTRE ICI
+        'project_id',
+        'user_id',
         'transactions',
         'entities',
         'team_exp',
         'manager_exp',
     ];
 
-    public function project() {
+    public function project()
+    {
         return $this->belongsTo(Project::class);
     }
 
-    public function user() {
+    public function user()
+    {
         return $this->belongsTo(User::class);
     }
     
-    public function estimations() {
+    public function estimations()
+    {
         return $this->hasMany(Estimation::class);
     }
 }

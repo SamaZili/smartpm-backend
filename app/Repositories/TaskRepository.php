@@ -16,10 +16,11 @@ class TaskRepository
     // Créer une nouvelle tâche dans un projet
     public function create(array $data, Project $project): Task
     {
+        // La relation Eloquent gère automatiquement le project_id
         return $project->tasks()->create($data);
     }
 
-    // Trouver une tâche par son ID dans un projet spécifique (pour la sécurité)
+    // Trouver une tâche par son ID dans un projet spécifique
     public function findByIdAndProject(int $id, Project $project): ?Task
     {
         return $project->tasks()->find($id);
