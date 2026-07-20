@@ -13,30 +13,32 @@ use App\Http\Controllers\DashboardController;
 // ==========================================
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-Route::get('/email/verify', [AuthController::class, 'verifyEmail']); // <-- NOUVELLE ROUTE AJOUTÉE
+Route::get('/email/verify', [AuthController::class, 'verifyEmail']);
 
 // ==========================================
 // Routes Protégées (Nécessite un Token Sanctum)
 // ==========================================
 Route::middleware('auth:sanctum')->group(function () {
-    // Auth
+    
+    // --- Auth ---
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
     
-    // Projets
+    // --- Projets ---
     Route::apiResource('projects', ProjectController::class);
     
-    // Tâches
+    // --- Tâches ---
     Route::get('projects/{project_id}/tasks', [TaskController::class, 'index']);
     Route::post('projects/{project_id}/tasks', [TaskController::class, 'store']);
-    Route::put('projects/{project_id}/tasks/{task}', [TaskController::class, 'update']);
-    Route::delete('projects/{project_id}/tasks/{task}', [TaskController::class, 'destroy']);
+    Route::put('projects/{project_id}/tasks/{task_id}', [TaskController::class, 'update']);
+    Route::delete('projects/{project_id}/tasks/{task_id}', [TaskController::class, 'destroy']);
 
-    // Estimation IA (Module 4)
-    Route::post('projects/{project_id}/tasks/{task}/estimate', [EstimationController::class, 'predict']);
-    Route::get('projects/{project_id}/tasks/{task}/estimations', [EstimationController::class, 'history']);
-
-    // Dashboard (Module 5)
+    // --- Estimation IA (Module 4) ---
+    // Les paramètres {project_id} et {task_id} correspondent aux arguments du contrôleur
+    Route::post('projects/{project_id}/tasks/{task_id}/estimate', [EstimationController::class, 'predict']);
+    Route::get('projects/{project_id}/tasks/{task_id}/estimations', [EstimationController::class, 'history']);
+    
+    // --- Dashboard (Module 5) ---
     Route::get('dashboard', [DashboardController::class, 'index']);
 });
