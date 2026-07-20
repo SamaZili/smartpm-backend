@@ -3,91 +3,85 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
-use App\Repositories\ProjectRepository;
-use App\Http\Requests\StoreProjectRequest;
-use App\Http\Requests\UpdateProjectRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Symfony\Component\HttpFoundation\Response;
 
 class ProjectController extends Controller
 {
-    protected ProjectRepository $projectRepository;
-
-    public function __construct(ProjectRepository $projectRepository)
+    public function index(Request $request): JsonResponse
     {
-        $this->projectRepository = $projectRepository;
-    }
-
-    public function index(Request $request)
-    {
-        $projects = $this->projectRepository->getAllForUser($request->user());
-        return response()->json([
-            'success' => true,
-            'data' => $projects
-        ]);
-    }
-
-    // ✅ CORRECTION : Format de réponse standardisé
-    public function store(StoreProjectRequest $request): JsonResponse
-    {
-        $project = $this->projectRepository->create($request->validated(), $request->user());
-        return response()->json([
-            'success' => true,
-            'data' => $project
-        ], Response::HTTP_CREATED);
-    }
-
-    public function show(Request $request, Project $project): JsonResponse
-    {
-        $userProject = $this->projectRepository->findByIdAndUser($project->id, $request->user());
-        
-        if (!$userProject) {
+        try {
+            $projects = Project::where('user_id', $request->user()->id)
+                              ->latest()
+                              ->get();
+            
+            return response()->json([
+                'success' => true,
+                'data' => $projects
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erreur index projets: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'error_code' => 'PROJECT_NOT_FOUND'
-            ], Response::HTTP_FORBIDDEN);
+                'message' => 'Erreur: ' . $e->getMessage()
+            ], 500);
         }
-        
-        return response()->json([
-            'success' => true,
-            'data' => $userProject
-        ]);
     }
 
-    public function update(UpdateProjectRequest $request, Project $project): JsonResponse
+    public function store(Request $request): JsonResponse
     {
-        $userProject = $this->projectRepository->findByIdAndUser($project->id, $request->user());
-        
-        if (!$userProject) {
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'status' => 'nullable|string',
+            ]);
+
+            $project = Project::create([
+                'name' => $validated['name'],
+                'description' => $validated['description'] ?? null,
+                'status' => $validated['status'] ?? 'en_cours',
+                'user_id' => $request->user()->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $project
+            ], 201);
+        } catch (\Exception $e) {
+            \Log::error('Erreur création projet: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'error_code' => 'PROJECT_NOT_FOUND'
-            ], Response::HTTP_FORBIDDEN);
+                'message' => 'Erreur: ' . $e->getMessage()
+            ], 500);
         }
-
-        $updatedProject = $this->projectRepository->update($userProject, $request->validated());
-        return response()->json([
-            'success' => true,
-            'data' => $updatedProject
-        ]);
     }
 
-    public function destroy(Request $request, Project $project): JsonResponse
+    public function update(Request $request, $id): JsonResponse
     {
-        $userProject = $this->projectRepository->findByIdAndUser($project->id, $request->user());
-        
-        if (!$userProject) {
-            return response()->json([
-                'success' => false,
-                'error_code' => 'PROJECT_NOT_FOUND'
-            ], Response::HTTP_FORBIDDEN);
-        }
+        try {
+            $project = Project::where('user_id', $request->user()->id)->findOrFail($id);
+            $validated = $request->validate([
+                'name' => 'sometimes|string|max:255',
+                'description' => 'nullable|string',
+                'status' => 'sometimes|string',
+            ]);
+            $project->update($validated);
 
-        $this->projectRepository->delete($userProject);
-        return response()->json([
-            'success' => true,
-            'message' => 'Projet supprimé avec succès.'
-        ]);
+            return response()->json(['success' => true, 'data' => $project]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Projet non trouvé'], 404);
+        }
+    }
+
+    public function destroy(Request $request, $id): JsonResponse
+    {
+        try {
+            $project = Project::where('user_id', $request->user()->id)->findOrFail($id);
+            $project->delete();
+            return response()->json(['success' => true, 'message' => 'Projet supprimé']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Projet non trouvé'], 404);
+        }
     }
 }
