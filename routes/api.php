@@ -9,6 +9,7 @@ use App\Http\Controllers\EstimationController;
 // Routes publiques
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']); // <-- AJOUTER CETTE LIGNE
 
 // Routes protégées
 Route::middleware('auth:sanctum')->group(function () {

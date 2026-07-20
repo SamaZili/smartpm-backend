@@ -99,4 +99,30 @@ class AuthController extends Controller
             'data' => ['user' => $request->user()],
         ]);
     }
+    public function forgotPassword(Request $request): JsonResponse
+{
+    try {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+        ]);
+
+        // En production, on enverrait un vrai email avec un token de réinitialisation
+        // Pour la démo, on retourne simplement un succès
+        return response()->json([
+            'success' => true,
+            'message' => 'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.'
+        ]);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Email invalide ou non trouvé.'
+        ], 422);
+    } catch (\Exception $e) {
+        \Log::error('Erreur forgot password: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur serveur'
+        ], 500);
+    }
+}
 }
