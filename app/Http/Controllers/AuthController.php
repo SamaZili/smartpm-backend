@@ -125,4 +125,5 @@ class AuthController extends Controller
             'message' => 'Email vérifié avec succès ✅',
         ]);
     }
+    
 }

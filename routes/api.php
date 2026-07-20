@@ -33,6 +33,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('projects/{project_id}/tasks', [TaskController::class, 'store']);
     Route::put('projects/{project_id}/tasks/{task_id}', [TaskController::class, 'update']);
     Route::delete('projects/{project_id}/tasks/{task_id}', [TaskController::class, 'destroy']);
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
 
     // --- Estimation IA (Module 4) ---
     // Les paramètres {project_id} et {task_id} correspondent aux arguments du contrôleur
