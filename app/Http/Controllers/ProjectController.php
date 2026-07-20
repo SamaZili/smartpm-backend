@@ -7,10 +7,11 @@ use App\Repositories\ProjectRepository;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class ProjectController extends Controller
 {
-    // Injection de dépendance du Repository
     protected ProjectRepository $projectRepository;
 
     public function __construct(ProjectRepository $projectRepository)
@@ -18,55 +19,75 @@ class ProjectController extends Controller
         $this->projectRepository = $projectRepository;
     }
 
-    // F2.4 : Liste des projets
     public function index(Request $request)
     {
         $projects = $this->projectRepository->getAllForUser($request->user());
-        return response()->json($projects);
+        return response()->json([
+            'success' => true,
+            'data' => $projects
+        ]);
     }
 
-    // F2.1 : Ajouter un projet (La validation est faite automatiquement par StoreProjectRequest)
-    public function store(StoreProjectRequest $request)
+    // ✅ CORRECTION : Format de réponse standardisé
+    public function store(StoreProjectRequest $request): JsonResponse
     {
         $project = $this->projectRepository->create($request->validated(), $request->user());
-        return response()->json($project, 201);
+        return response()->json([
+            'success' => true,
+            'data' => $project
+        ], Response::HTTP_CREATED);
     }
 
-    // F2.5 : Détail d'un projet
-    public function show(Request $request, Project $project)
+    public function show(Request $request, Project $project): JsonResponse
     {
         $userProject = $this->projectRepository->findByIdAndUser($project->id, $request->user());
         
         if (!$userProject) {
-            return response()->json(['message' => 'Non autorisé ou projet non trouvé'], 403);
+            return response()->json([
+                'success' => false,
+                'error_code' => 'PROJECT_NOT_FOUND'
+            ], Response::HTTP_FORBIDDEN);
         }
         
-        return response()->json($userProject);
+        return response()->json([
+            'success' => true,
+            'data' => $userProject
+        ]);
     }
 
-    // F2.2 : Modifier un projet
-    public function update(UpdateProjectRequest $request, Project $project)
+    public function update(UpdateProjectRequest $request, Project $project): JsonResponse
     {
         $userProject = $this->projectRepository->findByIdAndUser($project->id, $request->user());
         
         if (!$userProject) {
-            return response()->json(['message' => 'Non autorisé'], 403);
+            return response()->json([
+                'success' => false,
+                'error_code' => 'PROJECT_NOT_FOUND'
+            ], Response::HTTP_FORBIDDEN);
         }
 
         $updatedProject = $this->projectRepository->update($userProject, $request->validated());
-        return response()->json($updatedProject);
+        return response()->json([
+            'success' => true,
+            'data' => $updatedProject
+        ]);
     }
 
-    // F2.3 : Supprimer un projet
-    public function destroy(Request $request, Project $project)
+    public function destroy(Request $request, Project $project): JsonResponse
     {
         $userProject = $this->projectRepository->findByIdAndUser($project->id, $request->user());
         
         if (!$userProject) {
-            return response()->json(['message' => 'Non autorisé'], 403);
+            return response()->json([
+                'success' => false,
+                'error_code' => 'PROJECT_NOT_FOUND'
+            ], Response::HTTP_FORBIDDEN);
         }
 
         $this->projectRepository->delete($userProject);
-        return response()->json(['message' => 'Projet supprimé avec succès.']);
+        return response()->json([
+            'success' => true,
+            'message' => 'Projet supprimé avec succès.'
+        ]);
     }
 }
