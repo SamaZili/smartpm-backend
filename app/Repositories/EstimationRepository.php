@@ -7,19 +7,25 @@ use App\Models\Task;
 
 class EstimationRepository
 {
-    // Créer et historiser une nouvelle estimation pour une tâche
-    public function createEstimation(Task $task, float $predictedEffort, ?float $confidenceScore = null): Estimation
+    /**
+     * Créer une nouvelle estimation pour une tâche
+     */
+    public function createEstimation(Task $task, float $predictedEffort, float $confidenceScore): Estimation
     {
         return Estimation::create([
-            'task_id' => $task->id,
-            'predicted_effort' => round($predictedEffort, 2),
+            'task_id'          => $task->id,
+            'predicted_effort' => $predictedEffort, // ⚠️ C'est ici : utiliser predicted_effort, PAS estimated_hours
             'confidence_score' => $confidenceScore,
         ]);
     }
 
-    // Récupérer l'historique des estimations d'une tâche
+    /**
+     * Récupérer l'historique des estimations d'une tâche
+     */
     public function getHistory(Task $task)
     {
-        return $task->estimations()->latest()->get();
+        return Estimation::where('task_id', $task->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 }

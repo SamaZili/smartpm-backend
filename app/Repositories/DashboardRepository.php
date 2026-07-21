@@ -6,51 +6,39 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\Estimation;
 use Illuminate\Foundation\Auth\User;
-use Illuminate\Support\Facades\DB;
 
 class DashboardRepository
 {
-    protected User $user;
-
-    public function __construct(User $user)
+    /**
+     * Nombre de projets de l'utilisateur
+     */
+    public function getProjectStats(User $user)
     {
-        $this->user = $user;
+        return Project::where('user_id', $user->id)->count();
     }
 
-    // F5.1 : Statistiques des projets
-    public function getProjectStats()
+    /**
+     * Nombre de tâches de l'utilisateur
+     */
+    public function getTaskStats(User $user)
     {
-        return [
-            'total' => Project::where('user_id', $this->user->id)->count(),
-            'by_status' => Project::where('user_id', $this->user->id)
-                ->select('status', DB::raw('count(*) as total'))
-                ->groupBy('status')
-                ->get()
-        ];
+        return Task::whereHas('project', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->count();
     }
 
-    // F5.2 : Statistiques des tâches
-    public function getTaskStats()
+    /**
+     * Effort total estimé (CORRECTION DE L'ERREUR SQL ICI)
+     */
+    public function getTotalEstimatedEffort(User $user)
     {
-        return [
-            'total' => Task::whereHas('project', fn($q) => $q->where('user_id', $this->user->id))->count(),
-            'by_status' => Task::whereHas('project', function ($query) {
-                    $query->where('user_id', $this->user->id);
-                })
-                ->select('status', DB::raw('count(*) as total'))
-                ->groupBy('status')
-                ->get()
-        ];
-    }
+        // On somme les 'estimated_hours' des estimations qui appartiennent 
+        // à des tâches elles-mêmes appartenant aux projets de l'utilisateur.
+        $totalEffort = Estimation::whereHas('task.project', function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->sum('estimated_hours'); // <-- Nom correct de la colonne
 
-    // F5.3 : Temps estimé total (Requête JOIN robuste)
-    public function getTotalEstimatedEffort(): float
-    {
-        $total = Estimation::join('tasks', 'estimations.task_id', '=', 'tasks.id')
-            ->join('projects', 'tasks.project_id', '=', 'projects.id')
-            ->where('projects.user_id', $this->user->id)
-            ->sum('estimations.predicted_effort');
-
-        return round($total ?? 0, 2);
+        return (float) $totalEffort;
     }
 }
