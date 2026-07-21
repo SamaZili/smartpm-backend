@@ -144,4 +144,57 @@ class AuthController extends Controller
         ], 500);
     }
 }
+public function resetPassword(Request $request): JsonResponse
+{
+    try {
+        $request->validate([
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = \App\Models\User::where('reset_password_token', $request->token)->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Lien de réinitialisation invalide.'
+            ], 400);
+        }
+
+        // Vérifier si le token a expiré (60 minutes)
+        if ($user->reset_password_token_created_at) {
+            $createdAt = \Carbon\Carbon::parse($user->reset_password_token_created_at);
+            if ($createdAt->addMinutes(60)->isPast()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Le lien de réinitialisation a expiré. Veuillez en demander un nouveau.'
+                ], 400);
+            }
+        }
+
+        // Mettre à jour le mot de passe et supprimer le token
+        $user->password = \Illuminate\Support\Facades\Hash::make($request->password);
+        $user->reset_password_token = null;
+        $user->reset_password_token_created_at = null;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Mot de passe réinitialisé avec succès. Vous pouvez maintenant vous connecter.'
+        ]);
+
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur de validation',
+            'errors' => $e->errors()
+        ], 422);
+    } catch (\Exception $e) {
+        \Log::error('Erreur reset password: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Erreur serveur'
+        ], 500);
+    }
+}
 }
