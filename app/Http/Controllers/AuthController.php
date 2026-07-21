@@ -7,6 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ResetPasswordMail;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class AuthController extends Controller
 {
@@ -106,12 +110,27 @@ class AuthController extends Controller
             'email' => 'required|email|exists:users,email',
         ]);
 
-        // En production, on enverrait un vrai email avec un token de réinitialisation
-        // Pour la démo, on retourne simplement un succès
+        $user = \App\Models\User::where('email', $request->email)->first();
+        
+        // Générer un token unique
+        $token = Str::random(60);
+        
+        // Sauvegarder le token avec une date d'expiration (60 min)
+        $user->reset_password_token = $token;
+        $user->reset_password_token_created_at = now();
+        $user->save();
+
+        // Créer le lien de réinitialisation
+        $resetLink = "http://localhost:5173/reset-password?token={$token}";
+
+        // Envoyer l'email
+        Mail::to($user->email)->send(new ResetPasswordMail($user, $resetLink));
+
         return response()->json([
             'success' => true,
-            'message' => 'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.'
+            'message' => 'Un lien de réinitialisation a été envoyé à votre email.'
         ]);
+        
     } catch (\Illuminate\Validation\ValidationException $e) {
         return response()->json([
             'success' => false,
@@ -121,7 +140,7 @@ class AuthController extends Controller
         \Log::error('Erreur forgot password: ' . $e->getMessage());
         return response()->json([
             'success' => false,
-            'message' => 'Erreur serveur'
+            'message' => 'Erreur serveur: ' . $e->getMessage()
         ], 500);
     }
 }
