@@ -29,7 +29,7 @@ class Task extends Model
 
     // ✅ AJOUTER CETTE RELATION (C'est ce qui manque !)
     public function estimation()
-    {
-        return $this->hasOne(Estimation::class);
-    }
+{
+    return $this->hasOne(Estimation::class);
+}
 }

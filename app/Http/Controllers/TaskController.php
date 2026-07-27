@@ -9,18 +9,17 @@ use Illuminate\Support\Facades\Validator;
 
 class TaskController extends Controller
 {
-    // F3.4 : Liste des tâches d'un projet
     public function index(Request $request, $project_id) {
-        $project = $request->user()->projects()->find($project_id);
-        if (!$project) {
-            return response()->json(['success' => false, 'message' => 'Projet non trouvé ou non autorisé'], 404);
-        }
-
-        // ✅ CORRECTION : charger l'estimation avec chaque tâche
-        $tasks = $project->tasks()->with('estimation')->get();
-
-        return response()->json(['success' => true, 'data' => $tasks]);
+    $project = $request->user()->projects()->find($project_id);
+    if (!$project) {
+        return response()->json(['success' => false, 'message' => 'Projet non trouvé'], 404);
     }
+
+    // ✅ Charger les tâches AVEC leur estimation
+    $tasks = $project->tasks()->with('estimation')->get();
+
+    return response()->json(['success' => true, 'data' => $tasks]);
+}
 
     // F3.1 : Ajouter une tâche
     public function store(Request $request, $project_id) {
