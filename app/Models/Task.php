@@ -10,30 +10,26 @@ class Task extends Model
     use HasFactory;
 
     protected $fillable = [
+        'project_id',
         'name',
         'description',
         'status',
         'complexity',
-        'project_id',
-        'user_id',
         'transactions',
         'entities',
         'team_exp',
         'manager_exp',
     ];
 
+    // Relation avec le projet
     public function project()
     {
         return $this->belongsTo(Project::class);
     }
 
-    public function user()
+    // ✅ AJOUTER CETTE RELATION (C'est ce qui manque !)
+    public function estimation()
     {
-        return $this->belongsTo(User::class);
-    }
-    
-    public function estimations()
-    {
-        return $this->hasMany(Estimation::class);
+        return $this->hasOne(Estimation::class);
     }
 }

@@ -26,13 +26,11 @@ class EstimationController extends Controller
 
     public function predict(Request $request, $project_id, $task_id): JsonResponse
     {
-        // 1. Vérifier le projet
         $project = $request->user()->projects()->find($project_id);
         if (!$project) {
             return response()->json(['success' => false, 'error_code' => 'PROJECT_NOT_FOUND'], Response::HTTP_NOT_FOUND);
         }
 
-        // 2. Vérifier la tâche
         $task = $this->taskRepository->findByIdAndProject($task_id, $project);
         if (!$task) {
             return response()->json(['success' => false, 'error_code' => 'TASK_NOT_FOUND'], Response::HTTP_NOT_FOUND);
@@ -42,7 +40,6 @@ class EstimationController extends Controller
             return response()->json(['success' => false, 'error_code' => 'TASK_FIELDS_REQUIRED'], Response::HTTP_BAD_REQUEST);
         }
 
-        // 3. Appel au service IA (FastAPI)
         try {
             $response = Http::timeout(5)->post('http://127.0.0.1:8001/predict', [
                 'title'       => $task->name,
@@ -65,19 +62,17 @@ class EstimationController extends Controller
             return response()->json(['success' => false, 'error_code' => 'INVALID_IA_RESPONSE'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        // 4. Sauvegarder l'estimation dans la base de données (Dataset)
         try {
             $estimation = $this->estimationRepository->createEstimation(
                 $task,
                 (float) $data['predicted_effort_hours'],
-                0.85 // Score de confiance par défaut (à adapter si ton modèle le renvoie)
+                $data['confidence_score'] ?? 0.85
             );
         } catch (\Exception $e) {
             Log::error('Error saving estimation: ' . $e->getMessage());
             return response()->json(['success' => false, 'error_code' => 'DATABASE_SAVE_ERROR'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
-        // 5. Retourner la réponse au Frontend (Format attendu par le frontend : success + data)
         return response()->json([
             'success' => true,
             'data' => $estimation,
