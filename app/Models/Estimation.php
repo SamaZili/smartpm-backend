@@ -9,14 +9,22 @@ class Estimation extends Model
 {
     use HasFactory;
 
-    // Indispensable pour autoriser l'insertion en masse
     protected $fillable = [
         'task_id',
+        'project_id',
         'predicted_effort',
         'confidence_score',
     ];
 
-    public function task() {
+    // Relation avec la tâche
+    public function task()
+    {
         return $this->belongsTo(Task::class);
+    }
+
+    // Relation avec le projet
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
     }
 }
