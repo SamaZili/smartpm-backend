@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateProfileRequest extends FormRequest
+class ResetPasswordRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -13,11 +13,9 @@ class UpdateProfileRequest extends FormRequest
 
     public function rules(): array
     {
-        $userId = $this->user()->id;
-
         return [
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $userId,
+            'token' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
         ];
     }
 }

@@ -11,7 +11,6 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    // Champs autorisés pour la création/mise à jour en masse
     protected $fillable = [
         'name',
         'email',
@@ -19,26 +18,33 @@ class User extends Authenticatable
         'type',
         'email_verified_at',
         'email_verification_token',
+        'reset_password_token',
+        'reset_password_token_created_at',
     ];
 
-    // Champs cachés (ne pas renvoyer dans les réponses JSON)
     protected $hidden = [
         'password',
         'remember_token',
         'email_verification_token',
+        'reset_password_token',
     ];
 
-    // Casts des types de données
-    protected $casts = [
-        'email_verified_at' => 'datetime',
-        'password' => 'hashed',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'reset_password_token_created_at' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
 
-    // ==========================================
-    // ✅ AJOUT CRUCIAL : La relation avec les projets
-    // ==========================================
     public function projects()
     {
         return $this->hasMany(Project::class);
+    }
+
+    public function tasks()
+    {
+        return $this->hasMany(Task::class, 'assigned_to');
     }
 }
