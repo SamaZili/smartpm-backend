@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Task extends Model
 {
@@ -11,25 +13,37 @@ class Task extends Model
 
     protected $fillable = [
         'project_id',
+        'user_id',
         'name',
         'description',
         'status',
         'complexity',
+        'size',
         'transactions',
         'entities',
         'team_exp',
         'manager_exp',
+        'assigned_to',
+        'assignment_status',
     ];
 
-    // Relation avec le projet
-    public function project()
+    public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
     }
 
-    // ✅ AJOUTER CETTE RELATION (C'est ce qui manque !)
-    public function estimation()
-{
-    return $this->hasOne(Estimation::class);
-}
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function assignedTo(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function estimation(): HasOne
+    {
+        return $this->hasOne(Estimation::class);
+    }
 }
