@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Mail\TaskAssignedMail;
+use App\Mail\TaskStatusChangedMail;
 use App\Repositories\TaskRepository;
+use App\Repositories\NotificationRepository;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use Illuminate\Http\Request;
@@ -16,10 +18,12 @@ use Symfony\Component\HttpFoundation\Response;
 class TaskController extends Controller
 {
     protected TaskRepository $taskRepository;
+    protected NotificationRepository $notificationRepository;
 
-    public function __construct(TaskRepository $taskRepository)
+    public function __construct(TaskRepository $taskRepository, NotificationRepository $notificationRepository)
     {
         $this->taskRepository = $taskRepository;
+        $this->notificationRepository = $notificationRepository;
     }
 
     public function index(Request $request, $project_id): JsonResponse
@@ -99,6 +103,7 @@ class TaskController extends Controller
         ]);
     }
 
+    /** ✅ Le développeur change le statut → le chef de projet est notifié (app + email) */
     public function updateAssignmentStatus(Request $request, Task $task): JsonResponse
     {
         $request->validate([
@@ -112,18 +117,53 @@ class TaskController extends Controller
         $task->assignment_status = $request->assignment_status;
         $task->save();
 
+        $this->notifyChefDeProjet($task, $request->user(), $request->assignment_status);
+
         return response()->json(['success' => true, 'data' => $task->load('assignedTo')]);
     }
 
+    /** 📥 Notification au développeur quand une tâche lui est assignée */
     protected function notifyAssignedDeveloper(Task $task): void
     {
         try {
             $developer = $task->assignedTo;
             if ($developer) {
+                $this->notificationRepository->create(
+                    $developer,
+                    $task,
+                    'task_assigned',
+                    "📥 Nouvelle tâche assignée : « {$task->name} »."
+                );
                 Mail::to($developer->email)->send(new TaskAssignedMail($developer, $task));
             }
         } catch (\Throwable $e) {
-            Log::warning('Email assignation non envoyé: ' . $e->getMessage());
+            Log::warning('Notification assignation non envoyée: ' . $e->getMessage());
+        }
+    }
+
+    /** 🔔 Notification au chef de projet quand le développeur agit */
+    protected function notifyChefDeProjet(Task $task, $developer, string $status): void
+    {
+        try {
+            $chef = $task->project?->user;
+            if (!$chef) return;
+
+            $messages = [
+                'accepted' => "✅ {$developer->name} a accepté la tâche « {$task->name} ».",
+                'in_progress' => "🔄 {$developer->name} a commencé la tâche « {$task->name} ».",
+                'completed' => "🎉 {$developer->name} a terminé la tâche « {$task->name} ».",
+            ];
+
+            $this->notificationRepository->create(
+                $chef,
+                $task,
+                'task_' . $status,
+                $messages[$status] ?? "Mise à jour de la tâche « {$task->name} » par {$developer->name}."
+            );
+
+            Mail::to($chef->email)->send(new TaskStatusChangedMail($chef, $task, $developer, $status));
+        } catch (\Throwable $e) {
+            Log::warning('Notification chef de projet non envoyée: ' . $e->getMessage());
         }
     }
 }

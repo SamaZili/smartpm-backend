@@ -15,16 +15,13 @@ class UpdateTaskRequest extends FormRequest
     {
         return [
             'name' => 'sometimes|string|max:255',
-            'description' => 'sometimes|string',
-            'type' => 'sometimes|string|max:255',
-            'complexity' => 'sometimes|string|max:255',
-            'size' => 'sometimes|string|max:255',
+            'description' => 'nullable|string',
             'status' => 'sometimes|in:a_faire,en_cours,terminee',
-            // Champs Desharnais
-            'transactions' => 'sometimes|integer|min:0',
-            'entities' => 'sometimes|integer|min:0',
-            'team_exp' => 'sometimes|integer|min:0',
-            'manager_exp' => 'sometimes|integer|min:0',
+            'complexity' => 'sometimes|string|max:255',
+            'assigned_to' => 'sometimes|nullable|exists:users,id',
+            'assignment_status' => 'sometimes|nullable|in:pending,accepted,in_progress,completed',
+            'due_date' => 'sometimes|nullable|date',
+            'priority' => 'sometimes|nullable|in:low,medium,high,urgent',
         ];
     }
 }

@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\EstimationController;
@@ -23,6 +24,9 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
     Route::get('/users', [UserController::class, 'index']);
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::put('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+    Route::put('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
     Route::get('/my-tasks', [TaskController::class, 'myTasks']);
     Route::patch('/tasks/{task}/assignment-status', [TaskController::class, 'updateAssignmentStatus']);
     

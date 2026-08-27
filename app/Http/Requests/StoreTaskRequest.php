@@ -8,7 +8,7 @@ class StoreTaskRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // La sécurité d'accès est gérée par les routes (auth:sanctum)
+        return true;
     }
 
     public function rules(): array
@@ -16,15 +16,11 @@ class StoreTaskRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'type' => 'sometimes|string|max:255',
-            'complexity' => 'sometimes|string|max:255',
-            'size' => 'sometimes|string|max:255',
             'status' => 'sometimes|in:a_faire,en_cours,terminee',
-            // Champs Desharnais pour l'IA (Module 4)
-            'transactions' => 'sometimes|integer|min:0',
-            'entities' => 'sometimes|integer|min:0',
-            'team_exp' => 'sometimes|integer|min:0',
-            'manager_exp' => 'sometimes|integer|min:0',
+            'complexity' => 'nullable|string|max:255',
+            'assigned_to' => 'nullable|exists:users,id',
+            'due_date' => 'nullable|date',
+            'priority' => 'nullable|in:low,medium,high,urgent',
         ];
     }
 }

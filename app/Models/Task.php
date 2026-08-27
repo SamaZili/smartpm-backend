@@ -12,20 +12,18 @@ class Task extends Model
     use HasFactory;
 
     protected $fillable = [
-        'project_id',
-        'user_id',
-        'name',
-        'description',
-        'status',
-        'complexity',
-        'size',
-        'transactions',
-        'entities',
-        'team_exp',
-        'manager_exp',
-        'assigned_to',
-        'assignment_status',
+        'project_id', 'user_id', 'name', 'description', 'status',
+        'complexity', 'size', 'transactions', 'entities',
+        'team_exp', 'manager_exp', 'assigned_to', 'assignment_status',
+        'due_date', 'priority',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'due_date' => 'date',
+        ];
+    }
 
     public function project(): BelongsTo
     {
